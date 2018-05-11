@@ -55,10 +55,10 @@ public class UploadServlet extends HttpServlet {
             out.println("<title> A very simple servlet example</title>");
             out.println("</head>");
             out.println("<body>");
-            out.println("<h1>Hash :"+ map.get("hash") +"</h1></br>");
-            out.println("<h1>Does :"+ map.get("exist") +"</h1></br>");
-            out.println("<h1>ReportGenerationStatus :"+ generatedReport +"</h1></br>");
-            out.println("<h1>Report :"+ report +"</h1></br>");
+            out.println("Hash : "+ map.get("hash") +"</br>");
+            out.println("Does : "+ map.get("exist") +"</br>");
+            out.println("ReportGenerationStatus : "+ generatedReport +"</br>");
+            out.println("Report : "+ report +"</br>");
             out.println("</body>");
             out.println("</html>");
             out.close();
