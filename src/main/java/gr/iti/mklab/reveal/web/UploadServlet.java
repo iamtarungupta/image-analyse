@@ -2,6 +2,7 @@ package gr.iti.mklab.reveal.web;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Map;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
@@ -10,12 +11,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 
+import com.google.gson.Gson;
 import com.mongodb.MongoClientURI;
+import gr.iti.mklab.reveal.forensics.api.ForensicReport;
 import gr.iti.mklab.reveal.forensics.api.ReportManagement;
 import gr.iti.mklab.reveal.util.Configuration;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @WebServlet(name = "FileUploadServlet", urlPatterns = {"/mmapi/media/verificationreport/uploadImage"})
 @MultipartConfig(fileSizeThreshold = 6291456, // 6 MB
@@ -39,7 +43,11 @@ public class UploadServlet extends HttpServlet {
 
             System.out.println(mongoURI);
 
-            String hash= ReportManagement.downloadURL(filePart.getInputStream(), Configuration.MANIPULATION_REPORT_PATH, mongoURI);
+            Map<String, String> map = ReportManagement.downloadURL(filePart.getInputStream(), Configuration
+                            .MANIPULATION_REPORT_PATH, mongoURI);
+
+            String generatedReport = generateReport(map.get("hash"));
+            String report = new Gson().toJson(returnReport(map.get("hash")));
 
             PrintWriter out  = response.getWriter();
             out.println("<html>");
@@ -47,12 +55,74 @@ public class UploadServlet extends HttpServlet {
             out.println("<title> A very simple servlet example</title>");
             out.println("</head>");
             out.println("<body>");
-            out.println("<h1>welcomeMessage"+ hash +"</h1>");
+            out.println("<h1>Hash :"+ map.get("hash") +"</h1></br>");
+            out.println("<h1>Does :"+ map.get("exist") +"</h1></br>");
+            out.println("<h1>ReportGenerationStatus :"+ generatedReport +"</h1></br>");
+            out.println("<h1>Report :"+ report +"</h1></br>");
             out.println("</body>");
             out.println("</html>");
             out.close();
+
         } catch (Exception ex) {
-            System.out.println("Exception occured while uploading image."+ ex.getMessage() + " " + ex.getStackTrace().toString());
+            System.out.println("Exception occured while uploading image."+ ex.getMessage());
+        }
+    }
+
+    public String generateReport(String hash) throws RevealException {
+        try {
+            System.out.println("Received new hash for analysis. Beginning...");
+            MongoClientURI mongoURI = new MongoClientURI(Configuration.MONGO_URI);
+            String ReportResult=ReportManagement.createReport(hash, mongoURI, Configuration.MANIPULATION_REPORT_PATH,Configuration.MAX_GHOST_IMAGE_SMALL_DIM,Configuration.NUM_GHOST_THREADS,Configuration.NUM_TOTAL_THREADS,Configuration.FORENSIC_PROCESS_TIMEOUT);
+            System.out.println("Analysis complete with message: " + ReportResult);
+            return ReportResult;
+        } catch (Exception ex) {
+            System.out.println("Exception occured while generating report."+ ex.getMessage());
+            return null;
+        }
+    }
+
+
+    public ForensicReport returnReport(String hash) throws RevealException {
+        try {
+            System.out.println("Request for forensic report received, hash=" + hash + ".");
+            MongoClientURI mongoURI = new MongoClientURI(Configuration.MONGO_URI);
+            ForensicReport Report=ReportManagement.getReport(hash, mongoURI);
+            if (Report!=null) {
+                if (Report.elaReport.completed)
+                    Report.elaReport.map=Report.elaReport.map.replace(Configuration.MANIPULATION_REPORT_PATH, Configuration.HTTP_HOST + "images/");
+                if (Report.dqReport.completed)
+                    Report.dqReport.map=Report.dqReport.map.replace(Configuration.MANIPULATION_REPORT_PATH,Configuration.HTTP_HOST + "images/");
+                if (Report.displayImage!=null)
+                    Report.displayImage=Report.displayImage.replace(Configuration.MANIPULATION_REPORT_PATH,Configuration.HTTP_HOST + "images/");
+                if (Report.dwNoiseReport.completed)
+                    Report.dwNoiseReport.map=Report.dwNoiseReport.map.replace(Configuration.MANIPULATION_REPORT_PATH,Configuration.HTTP_HOST + "images/");
+                if (Report.gridsReport.completed){
+                    Report.gridsReport.map=Report.gridsReport.map.replace(Configuration.MANIPULATION_REPORT_PATH,Configuration.HTTP_HOST + "images/");
+                }
+                if (Report.gridsInversedReport.completed){
+                    Report.gridsInversedReport.map=Report.gridsInversedReport.map.replace(Configuration.MANIPULATION_REPORT_PATH,Configuration.HTTP_HOST + "images/");
+                }
+                if (Report.ghostReport.completed) {
+                    for (int GhostInd = 0; GhostInd < Report.ghostReport.maps.size(); GhostInd++) {
+                        Report.ghostReport.maps.set(GhostInd, Report.ghostReport.maps.get(GhostInd).replace(Configuration.MANIPULATION_REPORT_PATH, Configuration.HTTP_HOST + "images/"));
+                    }
+                }
+                if (Report.thumbnailReport.numberOfThumbnails>0) {
+                    for (int ThumbInd = 0; ThumbInd < Report.thumbnailReport.thumbnailList.size(); ThumbInd++) {
+                        Report.thumbnailReport.thumbnailList.set(ThumbInd, Report.thumbnailReport.thumbnailList.get(ThumbInd).replace(Configuration.MANIPULATION_REPORT_PATH, Configuration.HTTP_HOST + "images/"));
+                    }
+                }
+                if (Report.blockingReport.completed)
+                    Report.blockingReport.map=Report.blockingReport.map.replace(Configuration.MANIPULATION_REPORT_PATH,Configuration.HTTP_HOST + "images/");
+                if (Report.medianNoiseReport.completed)
+                    Report.medianNoiseReport.map=Report.medianNoiseReport.map.replace(Configuration.MANIPULATION_REPORT_PATH,Configuration.HTTP_HOST + "images/");
+
+            }
+            return Report;
+
+        } catch (Exception ex) {
+            System.out.println("Exception occured while getting report."+ ex.getMessage());
+            return null;
         }
     }
 }
