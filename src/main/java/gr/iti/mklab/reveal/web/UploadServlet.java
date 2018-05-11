@@ -46,22 +46,31 @@ public class UploadServlet extends HttpServlet {
             Map<String, String> map = ReportManagement.downloadURL(filePart.getInputStream(), Configuration
                             .MANIPULATION_REPORT_PATH, mongoURI);
 
-            String generatedReport = generateReport(map.get("hash"));
+            String generatedReportStatus = generateReport(map.get("hash"));
             String report = new Gson().toJson(returnReport(map.get("hash")));
 
-            PrintWriter out  = response.getWriter();
-            out.println("<html>");
-            out.println("<head>");
-            out.println("<title> A very simple servlet example</title>");
-            out.println("</head>");
-            out.println("<body>");
-            out.println("Hash : "+ map.get("hash") +"</br>");
-            out.println("Does : "+ map.get("exist") +"</br>");
-            out.println("ReportGenerationStatus : "+ generatedReport +"</br>");
-            out.println("Report : "+ report +"</br>");
-            out.println("</body>");
-            out.println("</html>");
-            out.close();
+//            PrintWriter out  = response.getWriter();
+//            out.println("<html>");
+//            out.println("<head>");
+//            out.println("<title> A very simple servlet example</title>");
+//            out.println("</head>");
+//            out.println("<body>");
+//            out.println("Hash : "+ map.get("hash") +"</br>");
+//            out.println("File Name : "+ filePart.getSubmittedFileName() +"</br>");
+//            out.println("Is Duplicate : "+ map.get("exist") +"</br>");
+//            out.println("ReportGenerationStatus : "+ generatedReport +"</br>");
+//            out.println("Report : "+ report +"</br>");
+//            out.println("</body>");
+//            out.println("</html>");
+//            out.close();
+
+            request.setAttribute("fileName", filePart.getSubmittedFileName());
+            request.setAttribute("hash", map.get("hash"));
+            request.setAttribute("isDuplicate", map.get("exist"));
+            request.setAttribute("generatedReportStatus", generatedReportStatus);
+            request.setAttribute("report", report);
+
+            getServletContext().getRequestDispatcher("/WEB-INF/pages/success.jsp").forward(request, response);
 
         } catch (Exception ex) {
             System.out.println("Exception occured while uploading image."+ ex.getMessage());

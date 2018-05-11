@@ -5,8 +5,15 @@
     <meta http-equiv="Content-Type" content="multipart/form-data">
 </head>
 
+<style>
+    form {
+        margin-top: 10%;
+    }
+</style>
+
 <body>
-    <form method="POST" action="/image-forensics/mmapi/media/verificationreport/uploadImage" enctype="multipart/form-data" >
+    <form align="center" method="POST" action="/image-forensics/mmapi/media/verificationreport/uploadImage"
+           enctype="multipart/form-data" >
         File:
         <input type="file" name="file" id="file" />  <br/>
         </br>
